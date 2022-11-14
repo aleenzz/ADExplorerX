@@ -152,7 +152,7 @@ def str_human_date(date):
     return f"{nb_sec} seconds"
 
 def processUsers(conn,parseObjects):
-    if not ('user' in parseObjects.classes and 'person' in parseObjects.category):
+    if parseObjects.category== None and not ('user' in parseObjects.classes and 'person' in parseObjects.category):
         return
     distinguishedName = get_entry_property(parseObjects.attributes, 'distinguishedName', default=0)
     ResOU = isOU(distinguishedName)
