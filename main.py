@@ -7,35 +7,35 @@ import re
 
 TemplateHeader = '''<!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<title></title>
-		<style type="text/css">
-			table{
-				border-collapse: collapse;
-			}	
-			table tr th{
-				border: solid 1px #ccc;
-				height: 30px;
-				width: 200px;
-				background-color: #eee;
-			}
-			table tr td{
-				border: solid 1px #ccc;
-				height: 30px;
-				text-align: center;
-			}
-			table tr:hover
-			{
-				background-color: #eee;
-			}
-		</style>
-	</head>
-	<body>
-	<table border="0" cellspacing="0" cellpadding="0">
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+        <style type="text/css">
+            table{
+                border-collapse: collapse;
+            }   
+            table tr th{
+                border: solid 1px #ccc;
+                height: 30px;
+                width: 200px;
+                background-color: #eee;
+            }
+            table tr td{
+                border: solid 1px #ccc;
+                height: 30px;
+                text-align: center;
+            }
+            table tr:hover
+            {
+                background-color: #eee;
+            }
+        </style>
+    </head>
+    <body>
+    <table border="0" cellspacing="0" cellpadding="0">
 '''
-TemplateFooter = '''</table>	
-	</body>
+TemplateFooter = '''</table>    
+    </body>
 </html>
 '''
 
@@ -104,7 +104,7 @@ def getObjectDN(DN):
         return None
     return DN.split(',')[0].split('=')[1].lower()
 
-def get_entry_property(entry, prop, default=None, raw=False):
+def getEntryProperty(entry, prop, default=None, raw=False):
     try:
         if raw:
             value = entry[prop]
@@ -121,7 +121,7 @@ def get_entry_property(entry, prop, default=None, raw=False):
         pass
     return value
 
-def win_timestamp_to_unix(seconds):
+def winTimestampToUnix(seconds):
     seconds = int(seconds)
     if seconds == 0:
         return 0
@@ -152,25 +152,25 @@ def str_human_date(date):
     return f"{nb_sec} seconds"
 
 def processUsers(conn,parseObjects):
-    if parseObjects.category== None and not ('user' in parseObjects.classes and 'person' in parseObjects.category):
+    if  parseObjects.category == None or not ('user' in parseObjects.classes and 'person' in parseObjects.category):
         return
-    distinguishedName = get_entry_property(parseObjects.attributes, 'distinguishedName', default=0)
+    distinguishedName = getEntryProperty(parseObjects.attributes, 'distinguishedName', default=0)
     ResOU = isOU(distinguishedName)
-    sAMAccountName = get_entry_property(parseObjects.attributes, 'sAMAccountName', default=0)
-    enabled = get_entry_property(parseObjects.attributes, 'userAccountControl', default=0) & 2 == 0
-    lastlogon = datetime.datetime.fromtimestamp(win_timestamp_to_unix(get_entry_property(parseObjects.attributes, 'lastLogon', default=0, raw=True)))
-    lastlogontimestamp = datetime.datetime.fromtimestamp(win_timestamp_to_unix(get_entry_property(parseObjects.attributes, 'lastlogontimestamp', default=0, raw=True)))
-    pwdlastset = datetime.datetime.fromtimestamp(win_timestamp_to_unix(get_entry_property(parseObjects.attributes, 'pwdLastSet', default=0, raw=True)))
-    email = get_entry_property(parseObjects.attributes, 'mail')
-    title = get_entry_property(parseObjects.attributes, 'title')
-    description = get_entry_property(parseObjects.attributes, 'description')
+    sAMAccountName = getEntryProperty(parseObjects.attributes, 'sAMAccountName', default=0)
+    enabled = getEntryProperty(parseObjects.attributes, 'userAccountControl', default=0) & 2 == 0
+    lastlogon = datetime.datetime.fromtimestamp(winTimestampToUnix(getEntryProperty(parseObjects.attributes, 'lastLogon', default=0, raw=True)))
+    lastlogontimestamp = datetime.datetime.fromtimestamp(winTimestampToUnix(getEntryProperty(parseObjects.attributes, 'lastlogontimestamp', default=0, raw=True)))
+    pwdlastset = datetime.datetime.fromtimestamp(winTimestampToUnix(getEntryProperty(parseObjects.attributes, 'pwdLastSet', default=0, raw=True)))
+    email = getEntryProperty(parseObjects.attributes, 'mail')
+    title = getEntryProperty(parseObjects.attributes, 'title')
+    description = getEntryProperty(parseObjects.attributes, 'description')
     conn.executeSql('''INSERT INTO "DomainUser" (distinguishedName,sAMAccountName,enabled,lastlogon,lastlogontimestamp,pwdlastset,email,title,description) VALUES (?,?,?,?,?,?,?,?,?)''',(ResOU,sAMAccountName,enabled,lastlogon,lastlogontimestamp,pwdlastset,email,title,description))
     return
 
 def processGroups(conn,parseObjects):
     if not 'group' in parseObjects.classes:
         return
-    distinguishedName = get_entry_property(parseObjects.attributes, 'distinguishedName')
+    distinguishedName = getEntryProperty(parseObjects.attributes, 'distinguishedName')
     DN = getObjectDN(distinguishedName)
     conn.executeSql('''INSERT INTO "DomainGroup" (name) VALUES (?)''',[DN])
     return
@@ -178,26 +178,26 @@ def processGroups(conn,parseObjects):
 def processDomainAccountPolicy(conn,parseObjects):
     if not 'domaindns' in parseObjects.classes:
         return
-    maxPwdAge = str_human_date(get_entry_property(parseObjects.attributes, 'maxPwdAge'))
-    minPwdAge = str_human_date(get_entry_property(parseObjects.attributes, 'minPwdAge'))
-    minPwdLength = get_entry_property(parseObjects.attributes, 'minPwdLength')
-    lockoutThreshold = get_entry_property(parseObjects.attributes, 'lockoutThreshold')
-    lockoutDuration = str_human_date(get_entry_property(parseObjects.attributes, 'lockoutDuration'))
+    maxPwdAge = str_human_date(getEntryProperty(parseObjects.attributes, 'maxPwdAge'))
+    minPwdAge = str_human_date(getEntryProperty(parseObjects.attributes, 'minPwdAge'))
+    minPwdLength = getEntryProperty(parseObjects.attributes, 'minPwdLength')
+    lockoutThreshold = getEntryProperty(parseObjects.attributes, 'lockoutThreshold')
+    lockoutDuration = str_human_date(getEntryProperty(parseObjects.attributes, 'lockoutDuration'))
     conn.executeSql('''INSERT INTO "DomainPolicy" (maxPwdAge,minPwdAge,minPwdLength,lockoutThreshold,lockoutDuration) VALUES (?,?,?,?,?)''',(maxPwdAge,minPwdAge,minPwdLength,lockoutThreshold,lockoutDuration))
     return
 
 def processComputers(conn,parseObjects):
-    if not get_entry_property(parseObjects.attributes, 'sAMAccountType') == 805306369 or (get_entry_property(parseObjects.attributes, 'userAccountControl', 0) & 0x02 == 0x02):
+    if not getEntryProperty(parseObjects.attributes, 'sAMAccountType') == 805306369 or (getEntryProperty(parseObjects.attributes, 'userAccountControl', 0) & 0x02 == 0x02):
         return
-    sAMAccountName = get_entry_property(parseObjects.attributes, 'sAMAccountName')
-    operatingsystem = get_entry_property(parseObjects.attributes, 'operatingSystem')
-    enabled = get_entry_property(parseObjects.attributes, 'userAccountControl', default=0) & 2 == 0
-    lastlogon = datetime.datetime.fromtimestamp(win_timestamp_to_unix(get_entry_property(parseObjects.attributes, 'lastLogon', default=0, raw=True)))
-    lastlogontimestamp = datetime.datetime.fromtimestamp(win_timestamp_to_unix(get_entry_property(parseObjects.attributes, 'lastlogontimestamp', default=0, raw=True)))
+    sAMAccountName = getEntryProperty(parseObjects.attributes, 'sAMAccountName')
+    operatingsystem = getEntryProperty(parseObjects.attributes, 'operatingSystem')
+    enabled = getEntryProperty(parseObjects.attributes, 'userAccountControl', default=0) & 2 == 0
+    lastlogon = datetime.datetime.fromtimestamp(winTimestampToUnix(getEntryProperty(parseObjects.attributes, 'lastLogon', default=0, raw=True)))
+    lastlogontimestamp = datetime.datetime.fromtimestamp(winTimestampToUnix(getEntryProperty(parseObjects.attributes, 'lastlogontimestamp', default=0, raw=True)))
     conn.executeSql('''INSERT INTO "DomainComputer" (sAMAccountName,operatingsystem,enabled,lastlogon,lastlogontimestamp) VALUES (?,?,?,?,?)''',(sAMAccountName,operatingsystem,enabled,lastlogon,lastlogontimestamp))
     return
 
-def database_connect(noJsonPath):
+def databaseConnect(noJsonPath):
     try:
         db = "%s.db"% noJsonPath
         isexistsdb = False
@@ -215,7 +215,7 @@ def database_connect(noJsonPath):
         return False
 
 
-def domain_parser(conn,noJson):
+def domainParser(conn,noJson):
     with open (noJson,"r") as f:
         for line in f:
             tmp = parseObjects()
@@ -227,42 +227,42 @@ def domain_parser(conn,noJson):
     return
 def initDatabase(conn,noJsonPath):
     conn.createTables('''CREATE TABLE if not exists "DomainGroup" (
-	"id"	INTEGER,
-	"name"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+    "id"    INTEGER,
+    "name"  TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
     );''')
     conn.createTables('''CREATE TABLE if not exists "DomainUser" (
-	"id"	INTEGER,
-	"distinguishedName"	TEXT,
-	"sAMAccountName"	TEXT,
-	"enabled"	TEXT,
-	"lastlogon"	TEXT,
-	"lastlogontimestamp"	TEXT,
-	"pwdlastset"	TEXT,
-	"email"	TEXT,
-	"title"	TEXT,
-	"description"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+    "id"    INTEGER,
+    "distinguishedName" TEXT,
+    "sAMAccountName"    TEXT,
+    "enabled"   TEXT,
+    "lastlogon" TEXT,
+    "lastlogontimestamp"    TEXT,
+    "pwdlastset"    TEXT,
+    "email" TEXT,
+    "title" TEXT,
+    "description"   TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
     );''')
     conn.createTables('''CREATE TABLE if not exists "DomainPolicy" (
-	"id"	INTEGER,
-	"maxPwdAge"	TEXT,
-	"minPwdAge"	TEXT,
-    "minPwdLength"	TEXT,
-	"lockoutThreshold"	TEXT,
-	"lockoutDuration"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+    "id"    INTEGER,
+    "maxPwdAge" TEXT,
+    "minPwdAge" TEXT,
+    "minPwdLength"  TEXT,
+    "lockoutThreshold"  TEXT,
+    "lockoutDuration"   TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
     );''')
     conn.createTables('''CREATE TABLE if not exists "DomainComputer" (
-	"id"	INTEGER,
-	"sAMAccountName"	TEXT,
-	"operatingsystem"	TEXT,
-	"enabled"	TEXT,
-	"lastlogon"	TEXT,
-	"lastlogontimestamp"	TEXT,
-	PRIMARY KEY("id" AUTOINCREMENT)
+    "id"    INTEGER,
+    "sAMAccountName"    TEXT,
+    "operatingsystem"   TEXT,
+    "enabled"   TEXT,
+    "lastlogon" TEXT,
+    "lastlogontimestamp"    TEXT,
+    PRIMARY KEY("id" AUTOINCREMENT)
     );''')
-    domain_parser(conn,noJsonPath)
+    domainParser(conn,noJsonPath)
 
 def getHtml(conn,name,data):
     if len(data) == 0:
@@ -287,8 +287,9 @@ def main():
     parser.add_argument('-g', '--group',action='store_true',help="Print Domain Group")
     parser.add_argument('-p', '--policy',action='store_true',help="Print Domain Policy")
     parser.add_argument('-u', '--user',action='store_true',help="Print Domain User")
+    parser.add_argument('-c', '--computer',action='store_true',help="Print Domain Computer")
     args = parser.parse_args()
-    conn = database_connect(args.noJson)
+    conn = databaseConnect(args.noJson)
     if conn == False:
         return
     if args.group == True:
@@ -297,6 +298,8 @@ def main():
         getHtml(conn,'DomainPolicy',['id','maxPwdAge','minPwdAge','minPwdLength','lockoutThreshold','lockoutDuration'])
     if args.user == True:
         getHtml(conn,'DomainUser',['id','distinguishedName','sAMAccountName','email','title','description','enabled','lastlogon','pwdlastset'])
+    if args.computer == True:
+        getHtml(conn,'DomainComputer',['id','sAMAccountName','operatingsystem','enabled','lastlogon','lastlogontimestamp'])
 
 if __name__ == '__main__':
     main()
